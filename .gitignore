@@ -1,0 +1,54 @@
+# Secrets & Environment Variables
+# NEVER commit these files. They contain sensitive credentials.
+.env
+serviceAccountKey.json
+
+# Python cache and artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+# Common names for virtual environment folders
+venv/
+.venv/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+wheels/
+pip-wheel-metadata/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Logs
+# Any folder named 'logs' and any file ending in '.log'
+logs/
+*.log
+
+# IDE and Editor-specific files
+# Visual Studio Code
+.vscode/
+# PyCharm
+.idea/
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# OS-generated files
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+desktop.ini
