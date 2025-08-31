@@ -1,33 +1,12 @@
 import asyncio
 from datetime import datetime, timezone
-from collections import Counter
-import re
 
 from db import firebase
 from agents.roadmap_agent import generate_roadmap
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 FIRESTORE_SEARCHES = "job_searches"
 FIRESTORE_ROADMAPS = "roadmaps"
-
-
-def _extract_skills_from_searches(search_docs: list) -> list:
-    """Analyzes job descriptions to find the most common skills."""
-    all_text = ""
-    for doc in search_docs:
-        if "job_results" in doc and isinstance(doc["job_results"], dict):
-            if "results" in doc["job_results"] and isinstance(
-                doc["job_results"]["results"], list
-            ):
-                for job in doc["job_results"]["results"]:
-                    if job and "description" in job and job["description"]:
-                        all_text += job["description"].lower()
-
-    skills = re.findall(
-        r"\b(python|java|react|node.js|typescript|aws|docker|kubernetes|sql|gcp|azure|fastapi|flask|git)\b",
-        all_text,
-    )
-
-    return [skill for skill, count in Counter(skills).most_common(10)]
 
 
 async def generate_student_roadmap(user_id: str) -> str:
@@ -38,7 +17,7 @@ async def generate_student_roadmap(user_id: str) -> str:
     def fetch_data():
         docs_query = (
             firebase.db.collection(FIRESTORE_SEARCHES)
-            .where("userId", "==", user_id)
+            .where(filter=FieldFilter("userId", "==", user_id))
             .stream()
         )
         return [doc.to_dict() for doc in docs_query]
@@ -48,10 +27,36 @@ async def generate_student_roadmap(user_id: str) -> str:
     if not search_docs:
         return "<h2>No Data Found</h2><p>Please perform a few job searches first to generate a roadmap.</p>"
 
-    top_skills = _extract_skills_from_searches(search_docs)
-    grad_year = search_docs[0]["student_profile"]["passed_out_year"]
+    jobs_data = []
+    for doc in search_docs:
+        if "job_results" in doc and isinstance(doc["job_results"], dict):
+            if "data" in doc["job_results"] and isinstance(
+                doc["job_results"]["data"], list
+            ):
+                for job in doc["job_results"]["data"]:
+                    if job and job.get("description") and job.get("job_title"):
+                        jobs_data.append(
+                            {
+                                "title": job["job_title"],  # Correct field name
+                                "description": job["description"],
+                                "company": job.get("company", ""),
+                                "technologies": job.get("technology_slugs", []),
+                                "seniority": job.get("seniority", ""),
+                            }
+                        )
 
-    roadmap_result = generate_roadmap(top_skills, grad_year)
+    if not jobs_data:
+        return "<h2>Not Enough Job Data</h2><p>The job searches found did not contain enough information to generate a roadmap.</p>"
+
+    # Get graduation year from student profile
+    grad_year = None
+    if search_docs and "student_profile" in search_docs[0]:
+        grad_year = search_docs[0]["student_profile"].get("passed_out_year")
+
+    if not grad_year:
+        grad_year = datetime.now().year + 1
+
+    roadmap_result = generate_roadmap(jobs_data, grad_year)
     roadmap_html = roadmap_result.roadmap_html
 
     def save_roadmap():
@@ -59,9 +64,8 @@ async def generate_student_roadmap(user_id: str) -> str:
             "userId": user_id,
             "roadmap_html": roadmap_html,
             "created_at": datetime.now(timezone.utc),
-            "based_on_skills": top_skills,
+            "based_on_job_count": len(jobs_data),
         }
-
         firebase.db.collection(FIRESTORE_ROADMAPS).document(user_id).set(
             roadmap_record, merge=True
         )
