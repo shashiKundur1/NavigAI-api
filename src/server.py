@@ -7,6 +7,8 @@ from core.settings import CORS_ALLOWED_ORIGINS
 from core.logging_config import setup_logging
 from db.firebase import init_firebase
 from routes.health import health_router
+from routes.job_search import job_search_router
+from routes.roadmap import roadmap_router
 
 setup_logging()
 
@@ -29,6 +31,8 @@ async def startup():
 
 
 app.register_blueprint(health_router)
+app.register_blueprint(job_search_router)
+app.register_blueprint(roadmap_router)
 
 if __name__ == "__main__":
     uvicorn.run("server:app", app_dir="src", host="localhost", port=5000, reload=True)
