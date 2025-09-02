@@ -1,7 +1,7 @@
 [project]
 name = "navigai-api"
 version = "0.1.0"
-description = ""
+description = "AI-powered career navigation and mock interview platform"
 authors = [
     {name = "Shashidhar Kundur",email = "shashidharkundur1@gmail.com"}
 ]
@@ -17,12 +17,27 @@ dependencies = [
     "black (>=25.1.0,<26.0.0)",
     "instructor (>=1.11.2,<2.0.0)",
     "generativeai (>=0.0.1,<0.0.2)",
-    "google-generativeai (>=0.8.5,<0.9.0)"
+    "google-generativeai (>=0.8.5,<0.9.0)",
+    "openai-whisper @ git+https://github.com/openai/whisper.git",
+    "pyttsx3 (>=2.99,<3.0)",
+    "sounddevice (>=0.5.2,<0.6.0)",
+    "scipy (>=1.16.1,<2.0.0)",
+    "matplotlib (>=3.10.6,<4.0.0)",
+    "reportlab (>=4.4.3,<5.0.0)",
+    "google-genai (>=1.32.0,<2.0.0)",
+    "customtkinter (>=5.2.2,<6.0.0)"
 ]
 
-[tool.poetry]
-packages = [{include = "navigai_api", from = "src"}]
+[project.scripts]
+navigai = "navigai_api.main:main"
 
+[tool.poetry]
+name = "navigai-api"
+version = "0.1.0"
+description = "AI-powered career navigation and mock interview platform"
+authors = ["Shashidhar Kundur <shashidharkundur1@gmail.com>"]
+readme = "README.md"
+packages = [{include = "navigai_api", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
