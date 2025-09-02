@@ -1,11 +1,9 @@
-# src/routes/mock_interview.py
 from quart import Blueprint, request, jsonify, send_file
 from datetime import datetime
 from typing import Dict, Any, Optional
 import os
 import tempfile
 import json
-
 from models.mock_interview import (
     InterviewSession,
     Question,
@@ -16,11 +14,18 @@ from models.mock_interview import (
     PerformanceMetrics,
 )
 from services.mock_interview_service import MockInterviewService
-import db.firebase as firebase_db
+from db.firebase_db import (
+    save_interview_session,
+    get_interview_session,
+    update_interview_session,
+    get_all_interview_sessions,
+    get_user_sessions,
+    get_analytics_data,
+    health_check as firebase_health_check,
+)
 
 mock_interview_bp = Blueprint("mock_interview", __name__)
 service = MockInterviewService()
-# FirebaseManager removed; use db.firebase functions directly
 
 
 @mock_interview_bp.route("/sessions", methods=["POST"])
@@ -28,7 +33,6 @@ async def create_interview_session():
     """Create a new interview session"""
     try:
         data = await request.get_json()
-
         # Validate required fields
         required_fields = ["job_title", "job_description", "candidate_id"]
         for field in required_fields:
@@ -53,7 +57,6 @@ async def create_interview_session():
             ),
             201,
         )
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -63,10 +66,8 @@ async def start_interview():
     """Start an interview session"""
     try:
         session_id = session_id
-
         # Start interview
         success = service.start_interview(session_id)
-
         if success:
             return jsonify(
                 {
@@ -77,7 +78,6 @@ async def start_interview():
             )
         else:
             return jsonify({"error": "Failed to start interview"}), 400
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -87,10 +87,8 @@ async def get_next_question():
     """Get the next question for the interview"""
     try:
         session_id = session_id
-
         # Get next question
         question = service.get_next_question(session_id)
-
         if question:
             return jsonify(
                 {
@@ -104,7 +102,6 @@ async def get_next_question():
             )
         else:
             return jsonify({"error": "No more questions available"}), 404
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -114,10 +111,8 @@ async def start_recording():
     """Start recording audio for the interview"""
     try:
         session_id = session_id
-
         # Start recording
         service.start_audio_recording(session_id)
-
         return jsonify(
             {
                 "session_id": session_id,
@@ -125,7 +120,6 @@ async def start_recording():
                 "message": "Recording started",
             }
         )
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -139,29 +133,38 @@ async def stop_recording():
         audio_file = service.stop_audio_recording()
         if not audio_file:
             return jsonify({"error": "No audio recorded"}), 400
+
         # Transcribe audio
         transcribed_text = service.transcribe_audio(audio_file)
+
         # Get current question
-        session_data = firebase_db.get_interview_session(session_id)
+        session_data = get_interview_session(session_id)
         if not session_data:
             return jsonify({"error": "Session not found"}), 404
+
         session = InterviewSession(**session_data)
+
         # Get the last asked question
         if not session.questions_asked:
             return jsonify({"error": "No questions asked yet"}), 400
+
         question_id = session.questions_asked[-1]
         question = next((q for q in service.question_bank if q.id == question_id), None)
         if not question:
             return jsonify({"error": "Question not found"}), 404
+
         # Analyze response
         answer = service.analyze_response(
             audio_file, transcribed_text, question, session
         )
+
         # Submit answer
         service.submit_answer(session_id, answer)
+
         # Clean up audio file
         if os.path.exists(audio_file):
             os.remove(audio_file)
+
         return jsonify(
             {
                 "session_id": session_id,
@@ -189,10 +192,8 @@ async def should_end_interview():
     """Check if interview should be ended"""
     try:
         session_id = session_id
-
         # Check if interview should end
         should_end = service.should_end_interview(session_id)
-
         return jsonify(
             {
                 "session_id": session_id,
@@ -202,7 +203,6 @@ async def should_end_interview():
                 ),
             }
         )
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -212,10 +212,8 @@ async def end_interview():
     """End the interview session"""
     try:
         session_id = session_id
-
         # End interview
         success = service.end_interview(session_id)
-
         if success:
             return jsonify(
                 {
@@ -226,7 +224,6 @@ async def end_interview():
             )
         else:
             return jsonify({"error": "Failed to end interview"}), 400
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -236,10 +233,8 @@ async def generate_report():
     """Generate and download interview report"""
     try:
         session_id = session_id
-
         # Generate report
         report_path = service.generate_interview_report(session_id)
-
         if report_path:
             return await send_file(
                 report_path,
@@ -249,7 +244,6 @@ async def generate_report():
             )
         else:
             return jsonify({"error": "Failed to generate report"}), 400
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -260,7 +254,7 @@ async def get_session():
     try:
         session_id = session_id
         # Get session data
-        session_data = firebase_db.get_interview_session(session_id)
+        session_data = get_interview_session(session_id)
         if not session_data:
             return jsonify({"error": "Session not found"}), 404
         return jsonify(session_data)
@@ -274,10 +268,12 @@ async def get_session_progress():
     try:
         session_id = session_id
         # Get session data
-        session_data = firebase_db.get_interview_session(session_id)
+        session_data = get_interview_session(session_id)
         if not session_data:
             return jsonify({"error": "Session not found"}), 404
+
         session = InterviewSession(**session_data)
+
         # Calculate progress
         progress = {
             "session_id": session_id,
@@ -291,8 +287,8 @@ async def get_session_progress():
             "completed_at": (
                 session.completed_at.isoformat() if session.completed_at else None
             ),
-            "progress_percentage": (len(session.answers) / 10)
-            * 100,  # Assuming max 10 questions
+            "progress_percentage": (len(session.answers) / 20)
+            * 100,  # Updated to 20 questions
         }
 
         # Add performance summary if answers exist
@@ -301,7 +297,6 @@ async def get_session_progress():
             avg_technical = sum(a.technical_score for a in session.answers) / len(
                 session.answers
             )
-
             progress["performance_summary"] = {
                 "latest_technical_score": latest_answer.technical_score,
                 "latest_communication_score": (
@@ -313,7 +308,6 @@ async def get_session_progress():
             }
 
         return jsonify(progress)
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -324,7 +318,6 @@ async def text_to_speech():
     try:
         session_id = session_id
         data = await request.get_json()
-
         if "text" not in data:
             return jsonify({"error": "Missing text field"}), 400
 
@@ -332,7 +325,6 @@ async def text_to_speech():
 
         # Convert text to speech
         success = service.text_to_speech(text)
-
         if success:
             return jsonify(
                 {
@@ -344,7 +336,6 @@ async def text_to_speech():
             )
         else:
             return jsonify({"error": "Failed to convert text to speech"}), 400
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -357,17 +348,21 @@ async def get_all_sessions():
         candidate_id = request.args.get("candidate_id")
         status = request.args.get("status")
         limit = int(request.args.get("limit", 50))
+
         # Get all sessions from Firebase
-        all_sessions = firebase_db.get_all_interview_sessions()
+        all_sessions = get_all_interview_sessions()
+
         # Filter sessions
         filtered_sessions = []
         for session_data in all_sessions:
             session = InterviewSession(**session_data)
+
             # Apply filters
             if candidate_id and session.candidate_id != candidate_id:
                 continue
             if status and session.status.value != status:
                 continue
+
             # Add to filtered list
             filtered_sessions.append(
                 {
@@ -388,10 +383,13 @@ async def get_all_sessions():
                     "answers_count": len(session.answers),
                 }
             )
+
         # Sort by creation date (newest first)
         filtered_sessions.sort(key=lambda x: x["created_at"], reverse=True)
+
         # Apply limit
         filtered_sessions = filtered_sessions[:limit]
+
         return jsonify(
             {
                 "sessions": filtered_sessions,
@@ -409,10 +407,12 @@ async def get_session_answers():
     try:
         session_id = session_id
         # Get session data
-        session_data = firebase_db.get_interview_session(session_id)
+        session_data = get_interview_session(session_id)
         if not session_data:
             return jsonify({"error": "Session not found"}), 404
+
         session = InterviewSession(**session_data)
+
         # Format answers
         answers = []
         for answer in session.answers:
@@ -420,6 +420,7 @@ async def get_session_answers():
             question = next(
                 (q for q in service.question_bank if q.id == answer.question_id), None
             )
+
             answer_data = {
                 "question_id": answer.question_id,
                 "question_text": question.text if question else "Unknown question",
@@ -442,6 +443,7 @@ async def get_session_answers():
                 "emotion_scores": answer.emotion_scores,
             }
             answers.append(answer_data)
+
         return jsonify(
             {
                 "session_id": session_id,
@@ -468,10 +470,8 @@ async def get_question_bank():
             # Apply filters
             if question_type and question.type.value != question_type:
                 continue
-
             if difficulty and question.difficulty.value != difficulty:
                 continue
-
             if category and question.category != category:
                 continue
 
@@ -483,17 +483,12 @@ async def get_question_bank():
                 "difficulty": question.difficulty.value,
                 "category": question.category,
                 "expected_keywords": question.expected_keywords,
-                "follow_up_questions": question.follow_up_questions,
-                "success_count": question.success_count,
-                "failure_count": question.failure_count,
             }
-
             filtered_questions.append(question_data)
 
         return jsonify(
             {"questions": filtered_questions, "total": len(filtered_questions)}
         )
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -506,17 +501,24 @@ async def get_performance_analytics():
         candidate_id = request.args.get("candidate_id")
         job_title = request.args.get("job_title")
         days = int(request.args.get("days", 30))
-        # Get all sessions
-        all_sessions = firebase_db.get_all_interview_sessions()
+
+        # Get analytics data using our new function
+        analytics_data = get_analytics_data(days)
+
+        # Get all sessions for detailed analysis
+        all_sessions = get_all_interview_sessions()
+
         # Filter and process sessions
         performance_data = []
         for session_data in all_sessions:
             session = InterviewSession(**session_data)
+
             # Apply filters
             if candidate_id and session.candidate_id != candidate_id:
                 continue
             if job_title and session.job_title != job_title:
                 continue
+
             # Check if session is completed and has performance metrics
             if (
                 session.status == InterviewStatus.COMPLETED
@@ -527,6 +529,7 @@ async def get_performance_analytics():
                     days_diff = (datetime.now() - session.completed_at).days
                     if days_diff > days:
                         continue
+
                 metrics = PerformanceMetrics(**session.performance_metrics)
                 performance_data.append(
                     {
@@ -542,6 +545,7 @@ async def get_performance_analytics():
                         "answers_count": len(session.answers),
                     }
                 )
+
         # Calculate aggregate statistics
         if performance_data:
             avg_technical = sum(
@@ -558,9 +562,11 @@ async def get_performance_analytics():
             avg_overall = sum(
                 p["performance_metrics"]["overall_score"] for p in performance_data
             ) / len(performance_data)
+
             # Question type performance
             question_type_performance = {}
             difficulty_performance = {}
+
             for session_data in all_sessions:
                 session = InterviewSession(**session_data)
                 if session.status == InterviewStatus.COMPLETED:
@@ -581,6 +587,7 @@ async def get_performance_analytics():
                             question_type_performance[q_type].append(
                                 answer.technical_score
                             )
+
                             # Difficulty performance
                             difficulty = question.difficulty.value
                             if difficulty not in difficulty_performance:
@@ -588,11 +595,13 @@ async def get_performance_analytics():
                             difficulty_performance[difficulty].append(
                                 answer.technical_score
                             )
+
             # Calculate averages
             for q_type in question_type_performance:
                 question_type_performance[q_type] = sum(
                     question_type_performance[q_type]
                 ) / len(question_type_performance[q_type])
+
             for difficulty in difficulty_performance:
                 difficulty_performance[difficulty] = sum(
                     difficulty_performance[difficulty]
@@ -601,6 +610,7 @@ async def get_performance_analytics():
             avg_technical = avg_communication = avg_emotional = avg_overall = 0
             question_type_performance = {}
             difficulty_performance = {}
+
         return jsonify(
             {
                 "analytics": {
@@ -630,9 +640,14 @@ async def get_performance_analytics():
 async def health_check():
     """Health check endpoint"""
     try:
+        # Check Firebase health
+        firebase_health = firebase_health_check()
+
         # Check if services are working
         health_status = {
-            "status": "healthy",
+            "status": (
+                "healthy" if firebase_health["firebase_connected"] else "unhealthy"
+            ),
             "timestamp": datetime.now().isoformat(),
             "services": {
                 "whisper_model": "loaded" if service.whisper_model else "not_loaded",
@@ -642,12 +657,16 @@ async def health_check():
                 "tts_engine": (
                     "initialized" if service.tts_engine else "not_initialized"
                 ),
-                "firebase": "connected",
+                "firebase": (
+                    "connected"
+                    if firebase_health["firebase_connected"]
+                    else "not_connected"
+                ),
             },
+            "firebase_details": firebase_health,
         }
 
         return jsonify(health_status)
-
     except Exception as e:
         return (
             jsonify(
@@ -659,3 +678,47 @@ async def health_check():
             ),
             500,
         )
+
+
+@mock_interview_bp.route("/user/<candidate_id>/sessions", methods=["GET"])
+async def get_user_sessions_endpoint(candidate_id):
+    """Get all sessions for a specific user"""
+    try:
+        # Get sessions for the user
+        sessions = get_user_sessions(candidate_id)
+
+        # Format sessions
+        formatted_sessions = []
+        for session_data in sessions:
+            session = InterviewSession(**session_data)
+            formatted_sessions.append(
+                {
+                    "session_id": session.id,
+                    "job_title": session.job_title,
+                    "status": session.status.value,
+                    "created_at": session.created_at.isoformat(),
+                    "started_at": (
+                        session.started_at.isoformat() if session.started_at else None
+                    ),
+                    "completed_at": (
+                        session.completed_at.isoformat()
+                        if session.completed_at
+                        else None
+                    ),
+                    "questions_asked": len(session.questions_asked),
+                    "answers_count": len(session.answers),
+                }
+            )
+
+        # Sort by creation date (newest first)
+        formatted_sessions.sort(key=lambda x: x["created_at"], reverse=True)
+
+        return jsonify(
+            {
+                "candidate_id": candidate_id,
+                "sessions": formatted_sessions,
+                "total": len(formatted_sessions),
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

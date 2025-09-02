@@ -1,14 +1,22 @@
-from datetime import datetime
-from typing import List, Dict, Optional, Any
-from enum import Enum
 from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+from enum import Enum
+import uuid
+
+
+class EmotionType(str, Enum):
+    CONFIDENT = "confident"
+    NERVOUS = "nervous"
+    NEUTRAL = "neutral"
+    ENTHUSIASTIC = "enthusiastic"
+    UNCERTAIN = "uncertain"
 
 
 class QuestionType(str, Enum):
     TECHNICAL = "technical"
     BEHAVIORAL = "behavioral"
-    SITUATIONAL = "situational"
-    PROBLEM_SOLVING = "problem_solving"
+    PROBLEM_SOLVING = "problem-solving"
     CULTURAL_FIT = "cultural_fit"
 
 
@@ -26,53 +34,40 @@ class InterviewStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class EmotionType(str, Enum):
-    CONFIDENT = "confident"
-    NERVOUS = "nervous"
-    NEUTRAL = "neutral"
-    ENTHUSIASTIC = "enthusiastic"
-    UNCERTAIN = "uncertain"
+class AudioAnalysis(BaseModel):
+    pitch: Optional[float] = None
+    speech_rate: Optional[float] = None
+    pauses_count: Optional[int] = None
+    fluency_score: float = 0.5
+    emotion_scores: Dict[str, float] = {}
+    clarity_score: float = 0.5
+    pace_score: float = 0.5
+
+    class Config:
+        extra = "allow"
 
 
 class Question(BaseModel):
-    id: str
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     text: str
     type: QuestionType
     difficulty: DifficultyLevel
     category: str
     expected_keywords: List[str] = []
-    follow_up_questions: List[str] = []
-    success_count: int = 0
-    failure_count: int = 0
 
 
 class Answer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_id: str
     text: str
-    audio_duration: float
-    timestamp: datetime
-    transcribed_text: str
+    audio_duration: float = 0.0
+    timestamp: datetime = Field(default_factory=datetime.now)
+    transcribed_text: str = ""
     emotion_scores: Dict[str, float] = {}
     sentiment_score: float = 0.0
-    confidence_score: float = 0.0
-    fluency_score: float = 0.0
-    technical_score: float = 0.0
-
-
-class InterviewSession(BaseModel):
-    id: str
-    job_title: str
-    job_description: str
-    candidate_id: str
-    status: InterviewStatus = InterviewStatus.CREATED
-    created_at: datetime = Field(default_factory=datetime.now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    questions_asked: List[str] = []
-    answers: List[Answer] = []
-    current_question_index: int = 0
-    performance_metrics: Dict[str, float] = {}
-    adaptive_params: Dict[str, Any] = {}
+    confidence_score: float = 0.5
+    fluency_score: float = 0.5
+    technical_score: float = 0.5
 
 
 class PerformanceMetrics(BaseModel):
@@ -86,30 +81,38 @@ class PerformanceMetrics(BaseModel):
     recommendations: List[str] = []
 
 
+class ThompsonSamplingParams(BaseModel):
+    question_type_success: Dict[QuestionType, int] = {}
+    question_type_failure: Dict[QuestionType, int] = {}
+    difficulty_success: Dict[DifficultyLevel, int] = {}
+    difficulty_failure: Dict[DifficultyLevel, int] = {}
+
+
+class InterviewSession(BaseModel):
+    id: str = Field(
+        default_factory=lambda: f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+    job_title: str
+    job_description: str
+    candidate_id: str
+    status: InterviewStatus = InterviewStatus.CREATED
+    created_at: datetime = Field(default_factory=datetime.now)
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    questions_asked: List[str] = []
+    current_question_index: int = 0
+    answers: List[Answer] = []
+    adaptive_params: Dict[str, Any] = {}
+    performance_metrics: Dict[str, Any] = {}
+    thompson_params: ThompsonSamplingParams = ThompsonSamplingParams()
+
+
 class InterviewReport(BaseModel):
     session_id: str
     candidate_id: str
     job_title: str
     generated_at: datetime = Field(default_factory=datetime.now)
     performance_metrics: PerformanceMetrics
-    detailed_analysis: Dict[str, Any]
-    question_responses: List[Dict[str, Any]]
-    improvement_suggestions: List[str]
-
-
-class ThompsonSamplingParams(BaseModel):
-    question_type_success: Dict[QuestionType, int] = Field(default_factory=dict)
-    question_type_failure: Dict[QuestionType, int] = Field(default_factory=dict)
-    difficulty_success: Dict[DifficultyLevel, int] = Field(default_factory=dict)
-    difficulty_failure: Dict[DifficultyLevel, int] = Field(default_factory=dict)
-    exploration_rate: float = 0.3
-    learning_rate: float = 0.1
-
-
-class AudioAnalysis(BaseModel):
-    pitch: float = 0.0
-    tone: str = "neutral"
-    speech_rate: float = 0.0
-    pauses_count: int = 0
-    clarity_score: float = 0.0
-    volume_score: float = 0.0
+    detailed_analysis: Dict[str, Any] = {}
+    question_responses: List[Dict[str, Any]] = []
+    improvement_suggestions: List[str] = []
