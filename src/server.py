@@ -5,7 +5,7 @@ from quart_cors import cors
 from core.settings import CORS_ALLOWED_ORIGINS
 
 from core.logging_config import setup_logging
-from db.firebase import init_firebase
+from db.firebase_init import init_firebase
 from routes.health import health_router
 from routes.job_search import job_search_router
 from routes.roadmap import roadmap_router
