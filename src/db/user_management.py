@@ -17,7 +17,7 @@ from .firebase_init import (
     DocumentNotFoundError,
     ValidationError,
 )
-from ..models.user import UserProfile, UserSession, UserRole, SubscriptionType
+from models.user import UserProfile, UserSession, UserRole, SubscriptionType
 
 logger = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from .firebase_init import (
     DocumentNotFoundError,
     ValidationError,
 )
-from ..models.interview import InterviewReport
+from models.interview import InterviewReport
 
 logger = logging.getLogger(__name__)
 

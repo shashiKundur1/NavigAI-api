@@ -4,11 +4,17 @@ Firebase initialization and connection management for NavigAI
 """
 
 import os
+import sys
 import logging
+from pathlib import Path
 from typing import Optional, Dict, Any
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.cloud.firestore import Client
+
+# Add the src directory to the path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+from core.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,31 +38,70 @@ def init_firebase() -> firebase_admin.App:
             logger.info("Firebase already initialized")
             return _firebase_app
 
-        # Get Firebase configuration from environment
-        firebase_project_id = os.getenv("FIREBASE_PROJECT_ID")
-        firebase_credentials_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
+        # Get Firebase configuration from settings
+        firebase_project_id = Settings.FIREBASE_PROJECT_ID
+        firebase_credentials_path = Settings.FIREBASE_CREDENTIALS_PATH
+
+        # If no explicit project ID, try to extract from service account key
+        if not firebase_project_id and firebase_credentials_path:
+            try:
+                # Check if the credentials path is relative to project root
+                if not os.path.isabs(firebase_credentials_path):
+                    # Get project root (3 levels up from src/db/firebase_init.py)
+                    project_root = Path(__file__).parent.parent.parent
+                    firebase_credentials_path = str(
+                        project_root / firebase_credentials_path
+                    )
+
+                if os.path.exists(firebase_credentials_path):
+                    import json
+
+                    with open(firebase_credentials_path, "r") as f:
+                        service_account_info = json.load(f)
+                        firebase_project_id = service_account_info.get("project_id", "")
+                        logger.info(
+                            f"Extracted project ID from service account: {firebase_project_id}"
+                        )
+            except Exception as e:
+                logger.warning(
+                    f"Could not extract project ID from service account: {e}"
+                )
 
         if not firebase_project_id:
-            raise ValueError("FIREBASE_PROJECT_ID environment variable is required")
-
-        # Initialize with service account key file if provided
-        if firebase_credentials_path and os.path.exists(firebase_credentials_path):
-            logger.info(
-                f"Initializing Firebase with service account: {firebase_credentials_path}"
+            raise ValueError(
+                "FIREBASE_PROJECT_ID is required. Set it in environment variables or ensure it's in your service account key file."
             )
-            cred = credentials.Certificate(firebase_credentials_path)
+
+        # Initialize with service account key file if provided and exists
+        credentials_path_to_use = firebase_credentials_path
+        if not os.path.isabs(credentials_path_to_use):
+            # Make path relative to project root
+            project_root = Path(__file__).parent.parent.parent
+            credentials_path_to_use = str(project_root / credentials_path_to_use)
+
+        if credentials_path_to_use and os.path.exists(credentials_path_to_use):
+            logger.info(
+                f"Initializing Firebase with service account: {credentials_path_to_use}"
+            )
+            cred = credentials.Certificate(credentials_path_to_use)
             _firebase_app = firebase_admin.initialize_app(
                 cred, {"projectId": firebase_project_id}
             )
         else:
             # Use default credentials (for Google Cloud environment)
-            logger.info("Initializing Firebase with default credentials")
+            logger.warning(
+                "No service account key file found. Falling back to Application Default Credentials."
+            )
+            logger.warning(
+                "⚠️ Firebase initialization failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information."
+            )
+            logger.warning("Some Firebase-dependent features may not work properly")
             try:
                 _firebase_app = firebase_admin.initialize_app(
                     options={"projectId": firebase_project_id}
                 )
             except Exception as e:
-                logger.warning(f"Failed to initialize with default credentials: {e}")
+                logger.error(f"Failed to initialize with default credentials: {e}")
                 # Try with Application Default Credentials
                 cred = credentials.ApplicationDefault()
                 _firebase_app = firebase_admin.initialize_app(
@@ -72,7 +117,13 @@ def init_firebase() -> firebase_admin.App:
         return _firebase_app
 
     except Exception as e:
-        logger.error(f"Failed to initialize Firebase: {e}")
+        error_msg = f"Failed to initialize Firebase: {e}"
+        if "Your default credentials were not found" in str(e):
+            error_msg += "\n⚠️ Firebase initialization failed: Your default credentials were not found."
+            error_msg += "\nSome Firebase-dependent features may not work properly"
+            logger.warning(error_msg)
+        else:
+            logger.error(error_msg)
         raise
 
 

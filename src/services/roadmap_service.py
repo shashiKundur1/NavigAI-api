@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timezone
 
-from db import firebase
+from db.firebase_db import get_db
 from agents.roadmap_agent import generate_roadmap
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -11,12 +11,13 @@ FIRESTORE_ROADMAPS = "roadmaps"
 
 async def generate_student_roadmap(user_id: str) -> str:
     """Orchestrates the creation of a student's learning roadmap."""
-    if not firebase.db:
+    db = get_db()
+    if not db:
         raise ConnectionError("Firestore client not initialized.")
 
     def fetch_data():
         docs_query = (
-            firebase.db.collection(FIRESTORE_SEARCHES)
+            db.collection(FIRESTORE_SEARCHES)
             .where(filter=FieldFilter("userId", "==", user_id))
             .stream()
         )
@@ -66,7 +67,7 @@ async def generate_student_roadmap(user_id: str) -> str:
             "created_at": datetime.now(timezone.utc),
             "based_on_job_count": len(jobs_data),
         }
-        firebase.db.collection(FIRESTORE_ROADMAPS).document(user_id).set(
+        db.collection(FIRESTORE_ROADMAPS).document(user_id).set(
             roadmap_record, merge=True
         )
 

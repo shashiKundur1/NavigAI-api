@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 
 from models.job_search import StudentProfile, JobSearchQuery
 from agents.job_search_agent import generate_job_search_query
-from core.settings import THEIR_STACK_API_KEY
-from db import firebase
+from core.settings import Settings
+from db.firebase_db import get_db
 
 THEIR_STACK_API_URL = "https://api.theirstack.com/v1/jobs/search"
 API_TIMEOUT = 30.0
@@ -17,22 +17,26 @@ async def _save_search_to_firebase(
     profile: StudentProfile, query: JobSearchQuery, results: Dict[str, Any], userId: str
 ) -> None:
     """Saves the search profile, AI query, and job results to Firestore."""
-    if not firebase.db:
-        print("Firestore client not initialized. Skipping save.")
-        return
+    try:
+        db = get_db()
+        if not db:
+            print("Firestore client not initialized. Skipping save.")
+            return
 
-    search_record = {
-        "userId": userId,
-        "student_profile": profile.model_dump(),
-        "ai_query": query.model_dump(),
-        "job_results": results,
-        "created_at": datetime.now(timezone.utc),
-    }
+        search_record = {
+            "userId": userId,
+            "student_profile": profile.model_dump(),
+            "ai_query": query.model_dump(),
+            "job_results": results,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
 
-    await asyncio.to_thread(
-        firebase.db.collection(FIRESTORE_COLLECTION).add, search_record
-    )
-    print(f"Successfully saved search and results for '{profile.name}' to Firestore.")
+        await asyncio.to_thread(db.collection(FIRESTORE_COLLECTION).add, search_record)
+        print(
+            f"Successfully saved search and results for '{profile.name}' to Firestore."
+        )
+    except Exception as e:
+        print(f"Error saving to Firebase: {e}")
 
 
 async def find_relevant_jobs(profile: StudentProfile, userId: str) -> Dict[str, Any]:
@@ -50,7 +54,7 @@ async def find_relevant_jobs(profile: StudentProfile, userId: str) -> Dict[str, 
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {THEIR_STACK_API_KEY}",
+        "Authorization": f"Bearer {Settings.THEIR_STACK_API_KEY}",
     }
 
     job_results = {}

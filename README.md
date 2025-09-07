@@ -133,34 +133,27 @@ I have successfully implemented a comprehensive AI Mock Interview System for you
    - PDF report generation
    - Adaptive learning engine
 
-3. **`src/agents/mock_interview_agent.py`** - Interview coordination agent
-
-   - Session management
-   - Question selection logic
-   - Response analysis coordination
-   - GUI integration
-
-4. **`src/routes/mock_interview.py`** - API endpoints
+3. **`src/routes/mock_interview.py`** - API endpoints
 
    - Complete REST API for all interview functions
    - Session management endpoints
    - Analytics and reporting endpoints
    - Health check and monitoring
 
-5. **`src/main.py`** - Enhanced GUI application
+4. **`src/main.py`** - API server application
 
-   - Professional interface with CustomTkinter
-   - Tabbed interface (Interview, History, Analytics, Settings)
-   - Real-time audio recording and analysis
-   - Comprehensive reporting features
+   - FastAPI-based REST API server
+   - Comprehensive interview management
+   - Real-time audio processing
+   - Analytics and reporting features
 
-6. **Updated `pyproject.toml`** - Dependencies and configuration
+5. **Updated `pyproject.toml`** - Dependencies and configuration
 
-   - All required packages for AI, audio, GUI, and reporting
+   - All required packages for AI, audio, API, and reporting
    - Development tools and testing frameworks
    - Build and packaging configuration
 
-7. **`README.md`** - Comprehensive documentation
+6. **`README.md`** - Comprehensive documentation
    - Installation and usage instructions
    - Architecture overview
    - Feature descriptions
@@ -173,7 +166,7 @@ I have successfully implemented a comprehensive AI Mock Interview System for you
 3. **Multi-modal Analysis**: Analyzes voice tone, sentiment, confidence, and technical accuracy
 4. **AI-powered Feedback**: Uses Google Gemini for intelligent response analysis and scoring
 5. **Comprehensive Reports**: Generates detailed PDF reports with performance metrics and recommendations
-6. **Modern GUI**: Professional interface with real-time feedback and analytics
+6. **Modern API**: RESTful API interface with real-time feedback and analytics
 7. **Scalable Architecture**: Modular design supporting easy extension and customization
 
 ### 🚀 How to Use:
@@ -183,3 +176,59 @@ I have successfully implemented a comprehensive AI Mock Interview System for you
    pip install poetry
    poetry install
    ```
+
+```
+navigai-api
+├─ .pre-commit-config.yaml
+├─ poetry.lock
+├─ pyproject.toml
+├─ README.md
+├─ settings.json
+└─ src
+   ├─ agents
+   │  ├─ interview_agent.py
+   │  ├─ job_search_agent.py
+   │  └─ roadmap_agent.py
+   ├─ core
+   │  ├─ logging_config.py
+   │  └─ settings.py
+   ├─ db
+   │  ├─ analytics.py
+   │  ├─ firebase_db.py
+   │  ├─ firebase_init.py
+   │  ├─ interview_reports.py
+   │  ├─ interview_sessions.py
+   │  ├─ user_management.py
+   │  └─ __init__.py
+   ├─ lib
+   │  └─ audio_utils.py
+   ├─ main.py
+   ├─ models
+   │  ├─ interview.py
+   │  ├─ job_search.py
+   │  ├─ mock_interview.py
+   │  ├─ roadmap.py
+   │  └─ user.py
+   ├─ routes
+   │  ├─ auth.py
+   │  ├─ health.py
+   │  ├─ interview.py
+   │  ├─ job_search.py
+   │  ├─ mock_interview.py
+   │  └─ roadmap.py
+   ├─ server.py
+   └─ services
+      ├─ audio_analysis_service.py
+      ├─ gemini_service.py
+      ├─ interview_service.py
+      ├─ job_search_service.py
+      ├─ livekit_service.py
+      ├─ mock_interview_service.py
+      ├─ question_generation_service.py
+      ├─ report_generation_service.py
+      ├─ roadmap_service.py
+      ├─ thompson_sampling_service.py
+      ├─ tts_service.py
+      └─ __init__.py
+
+```

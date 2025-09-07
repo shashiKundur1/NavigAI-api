@@ -1,9 +1,9 @@
 import instructor
 import google.generativeai as genai
 from models.job_search import StudentProfile, JobSearchQuery
-from core.settings import GEMINI_API_KEY
+from core.settings import Settings
 
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=Settings.GEMINI_API_KEY)
 
 gemini_client = genai.GenerativeModel(model_name="gemini-1.5-flash")
 

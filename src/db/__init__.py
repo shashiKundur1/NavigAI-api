@@ -65,8 +65,10 @@ from .user_management import (
     get_user_statistics,
 )
 
-from core.logging_config import logger
+import logging
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 from .analytics import (
     get_analytics_data,

@@ -1,9 +1,10 @@
 """
-Main application entry point for the NavigAI Mock Interview System
+Main application entry point for the NavigAI API Server
 """
 
 import sys
 import os
+import uvicorn
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -16,52 +17,37 @@ load_dotenv(dotenv_path=env_path)
 
 # Import core components
 from core.logging_config import setup_logging
-from gui.responsive_gui import ResponsiveMockInterviewGUI
 
 
 def main():
-    """Main function to run the application"""
+    """Main function to run the API server"""
     try:
         # Setup logging
         setup_logging()
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.info("Starting NavigAI Mock Interview System")
+        logger.info("Starting NavigAI API Server")
 
         # Verify API key is loaded
         from core.settings import Settings
 
         if not Settings.GEMINI_API_KEY:
             logger.error("GEMINI_API_KEY is not set in the environment variables.")
-            import tkinter as tk
-            from tkinter import messagebox
-
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showerror(
-                "Configuration Error",
-                "GEMINI_API_KEY is not set in the environment variables.",
-            )
+            print("ERROR: GEMINI_API_KEY is not set in the environment variables.")
             sys.exit(1)
 
-        # Create and run application
-        app = ResponsiveMockInterviewGUI()
-        app.run()
+        # Start the server directly with uvicorn
+        uvicorn.run(
+            "server:app", app_dir="src", host="localhost", port=5000, reload=True
+        )
 
     except Exception as e:
         import logging
 
         logger = logging.getLogger(__name__)
         logger.error(f"Application error: {e}")
-        import tkinter as tk
-        from tkinter import messagebox
-
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showerror(
-            "Application Error", f"Failed to start application: {str(e)}"
-        )
+        print(f"ERROR: Failed to start application: {str(e)}")
         sys.exit(1)
 
 

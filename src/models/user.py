@@ -135,3 +135,48 @@ class UserProfile:
             profile.last_login = datetime.fromisoformat(data["last_login"])
 
         return profile
+
+
+@dataclass
+class UserSession:
+    """User session data model for tracking login sessions"""
+
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str = ""
+    created_at: datetime = field(default_factory=datetime.now)
+    expires_at: Optional[datetime] = None
+    is_active: bool = True
+    login_method: str = "email"  # email, google, github, etc.
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert UserSession to dictionary"""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat(),
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "is_active": self.is_active,
+            "login_method": self.login_method,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "UserSession":
+        """Create UserSession from dictionary"""
+        session = cls()
+        session.id = data.get("id", session.id)
+        session.user_id = data.get("user_id", "")
+        session.is_active = data.get("is_active", True)
+        session.login_method = data.get("login_method", "email")
+        session.ip_address = data.get("ip_address")
+        session.user_agent = data.get("user_agent")
+
+        if data.get("created_at"):
+            session.created_at = datetime.fromisoformat(data["created_at"])
+        if data.get("expires_at"):
+            session.expires_at = datetime.fromisoformat(data["expires_at"])
+
+        return session

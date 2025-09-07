@@ -40,6 +40,9 @@ class Settings:
 
     # Firebase Settings
     FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", "")
+    FIREBASE_CREDENTIALS_PATH: str = os.getenv(
+        "FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json"
+    )
 
     # UI Settings
     UI_THEME: str = os.getenv("UI_THEME", "dark")
@@ -48,6 +51,12 @@ class Settings:
     # Logging Settings
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: str = os.getenv("LOG_FILE", "logs/navigai.log")
+
+    # CORS Settings
+    CORS_ALLOWED_ORIGINS: str = os.getenv("CORS_ALLOWED_ORIGINS", "*")
+
+    # Job Search API Settings
+    THEIR_STACK_API_KEY: str = os.getenv("THEIR_STACK_API_KEY", "")
 
     @classmethod
     def load_from_file(cls, file_path: str = "settings.json") -> None:
@@ -81,8 +90,16 @@ class Settings:
             "UI_COLOR": cls.UI_COLOR,
             "LOG_LEVEL": cls.LOG_LEVEL,
             "LOG_FILE": cls.LOG_FILE,
+            "CORS_ALLOWED_ORIGINS": cls.CORS_ALLOWED_ORIGINS,
+            "THEIR_STACK_API_KEY": cls.THEIR_STACK_API_KEY,
         }
 
 
 # Load settings from file if it exists
 Settings.load_from_file()
+
+# Make commonly used settings available at module level
+GEMINI_API_KEY = Settings.GEMINI_API_KEY
+FIREBASE_PROJECT_ID = Settings.FIREBASE_PROJECT_ID
+THEIR_STACK_API_KEY = Settings.THEIR_STACK_API_KEY
+CORS_ALLOWED_ORIGINS = Settings.CORS_ALLOWED_ORIGINS
