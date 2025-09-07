@@ -1,47 +1,37 @@
 import httpx
-import asyncio
 from typing import Dict, Any
 from datetime import datetime, timezone
 
 from models.job_search import StudentProfile, JobSearchQuery
 from agents.job_search_agent import generate_job_search_query
 from core.settings import Settings
-from db.firebase_db import get_db
+from db import save_job_search
 
 THEIR_STACK_API_URL = "https://api.theirstack.com/v1/jobs/search"
 API_TIMEOUT = 30.0
-FIRESTORE_COLLECTION = "job_searches"
 
 
-async def _save_search_to_firebase(
-    profile: StudentProfile, query: JobSearchQuery, results: Dict[str, Any], userId: str
+async def _save_search_record(
+    profile: StudentProfile,
+    query: JobSearchQuery,
+    results: Dict[str, Any],
+    user_id: str,
 ) -> None:
-    """Saves the search profile, AI query, and job results to Firestore."""
     try:
-        db = get_db()
-        if not db:
-            print("Firestore client not initialized. Skipping save.")
-            return
-
         search_record = {
-            "userId": userId,
+            "user_id": user_id,
             "student_profile": profile.model_dump(),
             "ai_query": query.model_dump(),
             "job_results": results,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(timezone.utc),
         }
-
-        await asyncio.to_thread(db.collection(FIRESTORE_COLLECTION).add, search_record)
-        print(
-            f"Successfully saved search and results for '{profile.name}' to Firestore."
-        )
+        await save_job_search(search_record)
+        print(f"Successfully saved search for user {user_id} to Firestore.")
     except Exception as e:
         print(f"Error saving to Firebase: {e}")
 
 
-async def find_relevant_jobs(profile: StudentProfile, userId: str) -> Dict[str, Any]:
-    """Orchestrates job searching and saves the request and results to Firebase."""
-
+async def find_relevant_jobs(profile: StudentProfile, user_id: str) -> Dict[str, Any]:
     ai_query = generate_job_search_query(profile)
 
     search_payload = {
@@ -76,6 +66,6 @@ async def find_relevant_jobs(profile: StudentProfile, userId: str) -> Dict[str, 
                 "details": e.response.text,
             }
 
-    await _save_search_to_firebase(profile, ai_query, job_results, userId)
+    await _save_search_record(profile, ai_query, job_results, user_id)
 
     return job_results

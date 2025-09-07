@@ -1,8 +1,3 @@
-# src/navigai_api/models/user.py
-"""
-User data models for the NavigAI system
-"""
-
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
@@ -11,16 +6,12 @@ import uuid
 
 
 class UserRole(Enum):
-    """User role enumeration"""
-
     CANDIDATE = "candidate"
     RECRUITER = "recruiter"
     ADMIN = "admin"
 
 
 class SubscriptionType(Enum):
-    """Subscription type enumeration"""
-
     FREE = "free"
     PREMIUM = "premium"
     ENTERPRISE = "enterprise"
@@ -28,47 +19,43 @@ class SubscriptionType(Enum):
 
 @dataclass
 class UserProfile:
-    """User profile data model"""
-
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     email: str = ""
+    password: str = ""  # Added for secure authentication
     full_name: str = ""
     role: UserRole = UserRole.CANDIDATE
+    is_approved: bool = False  # Flag for beta access approval
 
-    # Professional information
     current_job_title: str = ""
     experience_years: int = 0
     skills: List[str] = field(default_factory=list)
     target_roles: List[str] = field(default_factory=list)
     preferred_industries: List[str] = field(default_factory=list)
 
-    # Subscription information
     subscription_type: SubscriptionType = SubscriptionType.FREE
     subscription_start: Optional[datetime] = None
     subscription_end: Optional[datetime] = None
 
-    # Interview preferences
-    preferred_interview_duration: int = 1800  # 30 minutes
+    preferred_interview_duration: int = 1800
     preferred_difficulty: str = "medium"
     interview_goals: List[str] = field(default_factory=list)
 
-    # Performance tracking
     total_interviews: int = 0
     average_score: float = 0.0
     improvement_areas: List[str] = field(default_factory=list)
 
-    # Timestamps
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     last_login: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for Firebase storage"""
         return {
             "id": self.id,
             "email": self.email,
+            "password": self.password,
             "full_name": self.full_name,
             "role": self.role.value,
+            "is_approved": self.is_approved,
             "current_job_title": self.current_job_title,
             "experience_years": self.experience_years,
             "skills": self.skills,
@@ -94,13 +81,13 @@ class UserProfile:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "UserProfile":
-        """Create UserProfile from dictionary (Firebase data)"""
         profile = cls()
-
         profile.id = data.get("id", profile.id)
         profile.email = data.get("email", "")
+        profile.password = data.get("password", "")
         profile.full_name = data.get("full_name", "")
         profile.role = UserRole(data.get("role", "candidate"))
+        profile.is_approved = data.get("is_approved", False)
         profile.current_job_title = data.get("current_job_title", "")
         profile.experience_years = data.get("experience_years", 0)
         profile.skills = data.get("skills", [])
@@ -110,7 +97,6 @@ class UserProfile:
             data.get("subscription_type", "free")
         )
 
-        # Parse datetime fields
         if data.get("subscription_start"):
             profile.subscription_start = datetime.fromisoformat(
                 data["subscription_start"]
@@ -139,19 +125,16 @@ class UserProfile:
 
 @dataclass
 class UserSession:
-    """User session data model for tracking login sessions"""
-
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str = ""
     created_at: datetime = field(default_factory=datetime.now)
     expires_at: Optional[datetime] = None
     is_active: bool = True
-    login_method: str = "email"  # email, google, github, etc.
+    login_method: str = "email"
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert UserSession to dictionary"""
         return {
             "id": self.id,
             "user_id": self.user_id,
@@ -165,7 +148,6 @@ class UserSession:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "UserSession":
-        """Create UserSession from dictionary"""
         session = cls()
         session.id = data.get("id", session.id)
         session.user_id = data.get("user_id", "")

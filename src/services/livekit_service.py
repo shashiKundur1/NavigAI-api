@@ -18,11 +18,20 @@ from livekit.agents import (
     cli,
     function_tool,
 )
-from livekit.plugins import google, silero
+from livekit.plugins import google
 from livekit import api
 
+# Try to import silero, but make it optional
+try:
+    from livekit.plugins import silero
+
+    SILERO_AVAILABLE = True
+except ImportError:
+    SILERO_AVAILABLE = False
+    silero = None
+
 from core.settings import Settings
-from ..models.interview import InterviewSession, InterviewStatus
+from models.interview import InterviewSession, InterviewStatus
 from .gemini_service import GeminiService
 
 logger = logging.getLogger(__name__)
@@ -288,11 +297,17 @@ class InterviewAgent:
                 logger.warning(f"Gemini Live API not available, using pipeline: {e}")
 
                 # Fallback to pipeline approach
-                session = AgentSession(
-                    vad=silero.VAD.load(
+                vad_config = None
+                if SILERO_AVAILABLE:
+                    vad_config = silero.VAD.load(
                         min_silence_duration=0.8,  # Allow thinking pauses
                         min_speaking_duration=0.3,
-                    ),
+                    )
+                else:
+                    logger.warning("Silero VAD not available, using default VAD")
+
+                session = AgentSession(
+                    vad=vad_config,
                     stt=google.STT(
                         model="chirp", languages=["en-US"], spoken_punctuation=True
                     ),

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import uuid
 
-from ..models.interview import (
+from models.interview import (
     InterviewSession,
     InterviewStatus,
     InterviewQuestion,
@@ -17,7 +17,7 @@ from ..models.interview import (
     QuestionType,
     DifficultyLevel,
 )
-from db.firebase_db import (
+from db import (
     save_interview_session,
     get_interview_session,
     update_interview_session,

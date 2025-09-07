@@ -1,29 +1,11 @@
-import asyncio
 from datetime import datetime, timezone
 
-from db.firebase_db import get_db
+from db import get_job_searches_by_user, save_roadmap
 from agents.roadmap_agent import generate_roadmap
-from google.cloud.firestore_v1.base_query import FieldFilter
-
-FIRESTORE_SEARCHES = "job_searches"
-FIRESTORE_ROADMAPS = "roadmaps"
 
 
 async def generate_student_roadmap(user_id: str) -> str:
-    """Orchestrates the creation of a student's learning roadmap."""
-    db = get_db()
-    if not db:
-        raise ConnectionError("Firestore client not initialized.")
-
-    def fetch_data():
-        docs_query = (
-            db.collection(FIRESTORE_SEARCHES)
-            .where(filter=FieldFilter("userId", "==", user_id))
-            .stream()
-        )
-        return [doc.to_dict() for doc in docs_query]
-
-    search_docs = await asyncio.to_thread(fetch_data)
+    search_docs = await get_job_searches_by_user(user_id)
 
     if not search_docs:
         return "<h2>No Data Found</h2><p>Please perform a few job searches first to generate a roadmap.</p>"
@@ -38,7 +20,7 @@ async def generate_student_roadmap(user_id: str) -> str:
                     if job and job.get("description") and job.get("job_title"):
                         jobs_data.append(
                             {
-                                "title": job["job_title"],  # Correct field name
+                                "title": job["job_title"],
                                 "description": job["description"],
                                 "company": job.get("company", ""),
                                 "technologies": job.get("technology_slugs", []),
@@ -49,7 +31,6 @@ async def generate_student_roadmap(user_id: str) -> str:
     if not jobs_data:
         return "<h2>Not Enough Job Data</h2><p>The job searches found did not contain enough information to generate a roadmap.</p>"
 
-    # Get graduation year from student profile
     grad_year = None
     if search_docs and "student_profile" in search_docs[0]:
         grad_year = search_docs[0]["student_profile"].get("passed_out_year")
@@ -60,17 +41,12 @@ async def generate_student_roadmap(user_id: str) -> str:
     roadmap_result = generate_roadmap(jobs_data, grad_year)
     roadmap_html = roadmap_result.roadmap_html
 
-    def save_roadmap():
-        roadmap_record = {
-            "userId": user_id,
-            "roadmap_html": roadmap_html,
-            "created_at": datetime.now(timezone.utc),
-            "based_on_job_count": len(jobs_data),
-        }
-        db.collection(FIRESTORE_ROADMAPS).document(user_id).set(
-            roadmap_record, merge=True
-        )
-
-    await asyncio.to_thread(save_roadmap)
+    roadmap_record = {
+        "user_id": user_id,
+        "roadmap_html": roadmap_html,
+        "created_at": datetime.now(timezone.utc),
+        "based_on_job_count": len(jobs_data),
+    }
+    await save_roadmap(user_id, roadmap_record)
 
     return roadmap_html

@@ -1,21 +1,17 @@
 from quart import Blueprint, request, jsonify, Response
-from models.roadmap import RoadmapRequest
+from quart_jwt_extended import jwt_required, get_jwt_identity
 from services.roadmap_service import generate_student_roadmap
 
 roadmap_router = Blueprint("roadmap", __name__, url_prefix="/api/v1/roadmap")
 
 
 @roadmap_router.route("/generate", methods=["POST"])
+@jwt_required
 async def generate_roadmap_endpoint():
-    """API endpoint to generate and retrieve a student's learning roadmap."""
     try:
-        data = await request.get_json()
-        req = RoadmapRequest(**data)
-    except Exception as e:
-        return jsonify({"error": "Invalid input data", "details": str(e)}), 400
-
-    try:
-        roadmap_html = await generate_student_roadmap(req.user_id)
+        user_id = get_jwt_identity()
+        roadmap_html = await generate_student_roadmap(user_id)
         return Response(roadmap_html, content_type="text/html")
+
     except Exception as e:
         return jsonify({"error": "Failed to generate roadmap", "details": str(e)}), 500
