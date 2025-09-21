@@ -65,7 +65,13 @@ app = create_app()
 
 def start_server():
     """Start the NavigAI API server"""
-    uvicorn.run("server:app", app_dir="src", host="localhost", port=5000, reload=True)
+    import os
+
+    host = os.environ.get("HOST", "0.0.0.0")  # Digital Ocean needs 0.0.0.0
+    port = int(os.environ.get("PORT", 5000))
+    reload = os.environ.get("ENVIRONMENT", "development") == "development"
+
+    uvicorn.run("server:app", app_dir="src", host=host, port=port, reload=reload)
 
 
 if __name__ == "__main__":
