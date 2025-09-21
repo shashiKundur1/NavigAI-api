@@ -13,8 +13,6 @@
   ],
   "env": {
     "PYTHONPATH": "src",
-    "CORS_ALLOWED_ORIGINS": "https://your-client-domain.vercel.app",
-    "GEMINI_API_KEY": "@gemini-api-key",
-    "THEIR_STACK_API_KEY": "@their-stack-api-key"
+    "CORS_ALLOWED_ORIGINS": "https://your-client-domain.vercel.app"
   }
 }
