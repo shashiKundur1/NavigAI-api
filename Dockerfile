@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements.txt
+# Copy requirements.txt first for better caching
 COPY requirements.txt ./
 
 # Install Python dependencies
@@ -22,8 +22,13 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Expose port (Digital Ocean will inject $PORT)
+# Google Cloud Run injects PORT environment variable
+ENV PORT=8080
 EXPOSE $PORT
 
-# Run the application
-CMD cd src && python -m uvicorn server:app --host 0.0.0.0 --port ${PORT:-8080}
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Run the application (Google Cloud Run will inject $PORT)
+CMD cd src && python -m uvicorn server:app --host 0.0.0.0 --port $PORT
