@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements.txt first for better caching
+# Copy requirements.txt first for better Docker layer caching
 COPY requirements.txt ./
 
 # Install Python dependencies
@@ -22,7 +22,7 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Google Cloud Run injects PORT environment variable
+# AWS App Runner will inject PORT, default to 8080
 ENV PORT=8080
 EXPOSE $PORT
 
@@ -30,5 +30,5 @@ EXPOSE $PORT
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Run the application (Google Cloud Run will inject $PORT)
+# Run the application
 CMD cd src && python -m uvicorn server:app --host 0.0.0.0 --port $PORT
