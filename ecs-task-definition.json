@@ -1,0 +1,94 @@
+{
+  "family": "navigai-api-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT-ID>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT-ID>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "navigai-api",
+      "image": "<ECR-URI>:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "8080"
+        },
+        {
+          "name": "PYTHONPATH",
+          "value": "src"
+        },
+        {
+          "name": "CORS_ALLOWED_ORIGINS",
+          "value": "http://localhost:3000,http://127.0.0.1:3000,https://navig-ai-client-oegntr6v0-shashidhars-projects-11d35d8d.vercel.app"
+        },
+        {
+          "name": "FIREBASE_PROJECT_ID",
+          "value": "navigai"
+        },
+        {
+          "name": "WHISPER_MODEL",
+          "value": "small"
+        },
+        {
+          "name": "SAMPLE_RATE",
+          "value": "16000"
+        },
+        {
+          "name": "RECORDING_TIMEOUT",
+          "value": "120"
+        },
+        {
+          "name": "SILENCE_THRESHOLD",
+          "value": "3"
+        },
+        {
+          "name": "MAX_QUESTIONS",
+          "value": "20"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "INFO"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "GEMINI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/gemini-api-key"
+        },
+        {
+          "name": "JWT_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/jwt-secret-key"
+        },
+        {
+          "name": "THEIR_STACK_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/their-stack-api-key"
+        },
+        {
+          "name": "LIVEKIT_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/livekit-api-key"
+        },
+        {
+          "name": "LIVEKIT_API_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/livekit-api-secret"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/navigai-api",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

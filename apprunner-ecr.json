@@ -1,0 +1,45 @@
+{
+  "ServiceName": "navigai-api-ecr",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "<ECR-URI>:latest",
+      "ImageConfiguration": {
+        "Port": "8080",
+        "RuntimeEnvironmentVariables": {
+          "PORT": "8080",
+          "PYTHONPATH": "src",
+          "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://127.0.0.1:3000,https://navig-ai-client-oegntr6v0-shashidhars-projects-11d35d8d.vercel.app",
+          "FIREBASE_PROJECT_ID": "navigai",
+          "WHISPER_MODEL": "small",
+          "SAMPLE_RATE": "16000",
+          "RECORDING_TIMEOUT": "120",
+          "SILENCE_THRESHOLD": "3",
+          "MAX_QUESTIONS": "20",
+          "LOG_LEVEL": "INFO",
+          "LIVEKIT_URL": "wss://navigai-40iru0ui.livekit.cloud"
+        },
+        "RuntimeEnvironmentSecrets": {
+          "GEMINI_API_KEY": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/gemini-api-key",
+          "JWT_SECRET_KEY": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/jwt-secret-key",
+          "THEIR_STACK_API_KEY": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/their-stack-api-key",
+          "LIVEKIT_API_KEY": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/livekit-api-key",
+          "LIVEKIT_API_SECRET": "arn:aws:secretsmanager:<REGION>:<ACCOUNT-ID>:secret:navigai/livekit-api-secret"
+        }
+      },
+      "ImageRepositoryType": "ECR"
+    },
+    "AutoDeploymentsEnabled": true
+  },
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB"
+  },
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/api/test",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  }
+}
