@@ -11,7 +11,12 @@ from db.firebase_init import init_firebase
 def create_app():
     setup_logging()
     app = Quart(__name__)
-    app = cors(app, allow_origin=Settings.CORS_ALLOWED_ORIGINS)
+    app = cors(
+        app,
+        allow_origin=Settings.CORS_ALLOWED_ORIGINS,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+    )
 
     # Configure JWT first
     app.config["JWT_SECRET_KEY"] = os.environ.get(
@@ -35,6 +40,11 @@ def create_app():
     app.register_blueprint(job_search_router)
     app.register_blueprint(roadmap_router)
     app.register_blueprint(interview_bp, url_prefix="/api/v1/interview")
+
+    # Quick test endpoint
+    @app.route("/api/test", methods=["GET", "POST"])
+    async def test():
+        return {"status": "ok", "message": "API is working"}
 
     @app.after_request
     async def add_security_headers(response: Response) -> Response:
