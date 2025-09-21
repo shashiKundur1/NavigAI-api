@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python"
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -12,7 +13,6 @@
     }
   ],
   "env": {
-    "PYTHONPATH": "src",
-    "CORS_ALLOWED_ORIGINS": "https://your-client-domain.vercel.app"
+    "PYTHONPATH": "src"
   }
 }

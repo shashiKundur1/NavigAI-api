@@ -1,7 +1,3 @@
-"""
-Vercel serverless function handler for NavigAI API
-"""
-
 import sys
 import os
 from pathlib import Path
@@ -23,25 +19,3 @@ from server import create_app
 
 # Create the app instance
 app = create_app()
-
-
-# Vercel handler function
-def handler(request, context=None):
-    """Handler function for Vercel serverless deployment"""
-    return app(request)
-
-
-# For compatibility with different calling conventions
-def lambda_handler(event, context):
-    """AWS Lambda compatibility handler"""
-    return handler(event, context)
-
-
-# For direct ASGI compatibility
-application = app
-
-# Export the app for Vercel
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
